@@ -1,3 +1,4 @@
+
 package ist;
 
 import robocode.*;
@@ -7,15 +8,15 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.geom.Point2D;
 
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Date;
-import java.util.Date.*;
 import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.lang.*;
-import java.lang.Long.*;
 
 
 // API help : http://robocode.sourceforge.net/docs/robocode/robocode/Robot.html
@@ -27,27 +28,18 @@ import java.lang.Long.*;
 public class Feral extends AdvancedRobot {
 
 double prevEnergy = 100.0;
-double speed = 1;
 
-Integer rescanCount = 0;
-boolean normal = true;
-String radar = "lock";
+boolean rescanning = false;
+long lastScan = 0;
+
 double square_angle = 90;
 int moveDirection = 1;
-String closest = "";
 long lastTime = 0;
 
+// New scan vars
 double scanDir = 1;
 
-final Map<String, RobotData> botList;
-
-Map < String, Map > botList = new HashMap < String, Map > ();
-Map < String, Long > botTimeList = new HashMap < String, Long > ();
-Map < String, Double > botDistList = new HashMap < String, Double > ();
-Map < String, Double > botBearList = new HashMap < String, Double > ();
-Map < String, Double > botVeloList = new HashMap < String, Double > ();
-Map < String, Double > botHeadList = new HashMap < String, Double > ();
-Map < String, Double > botEnrgList = new HashMap < String, Double > ();
+Map<String, ScannedRobot> botList = new HashMap<String, ScannedRobot>();
 
 /**
  * run: Square's default behavior
@@ -56,55 +48,72 @@ public void run() {
         // Initialization of the robot should be put here
 
         Color realOrange = new Color(255, 100, 0);
-        setColors(realOrange, Color.black, realOrange, realOrange, realOrange); // body,gun,radar
+        setColors(realOrange, realOrange, Color.black, realOrange, realOrange); // body,gun,radar, bullet, scan
 
         setAdjustGunForRobotTurn(true);
         setAdjustRadarForGunTurn(true);
 
-        setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+        setTurnRadarLeftRadians(Double.POSITIVE_INFINITY);
 
         // Robot main loop
         while (true) {
 
-                ahead(0);
-                setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+                setAhead(0);
+                if ( getRadarTurnRemaining() == 0.0 ) {
+                        setTurnRadarRightRadians( Double.POSITIVE_INFINITY );
+                }
+
+                if (lastScan < getTime() - 40) {
+                        lastScan = getTime();
+                        rescanning = true;
+                        turnRadarRight(360);
+                        rescanning = false;
+                }
+
+                execute();
 
         }
 }
 
 public void smartFire(String bot) {
 
-
-        // Get closest bot's data
-        double dist = botDistList.get(bot);
-        double bearing = botBearList.get(bot);
-        double velocity = botVeloList.get(bot);
-        double heading = botHeadList.get(bot);
+        ScannedRobot m = ScannedRobot.class.cast(botList.get(bot));
 
         double myEnergy = getEnergy();
         double power = .1;
 
-        // Determine power
-        if (dist < 50) {
+        // Determine power based on enemy distance
+        if (m.distance < 80) {
                 power = 3;
-        } else if (dist < 150) {
+        } else if (m.distance < 150) {
                 power = 2;
-        } else if (dist < 250) {
+        } else if (m.distance < 250) {
                 power = 1.5;
-        } else if (dist < 400) {
+        } else if (m.distance < 400) {
                 power = 0.5;
         }
 
-        if (myEnergy < 5) {
+        // Determine power based on my energy
+        if (myEnergy < 2) {
+                if (m.distance < 50) {
+                        power = 0.1;
+                } else {
+                        power=0;
+                }
+        } else if (myEnergy < 5) {
                 power = power/4;
-        } else if (myEnergy < 20) {
+        } else if (myEnergy < 10) {
                 power = power/2;
         }
 
-        // Turn gun to shoot ahead of enemy
-        double headOnBearing = getHeadingRadians() + bearing;
-        double linearBearing = headOnBearing + Math.asin(velocity / Rules.getBulletSpeed(power) * Math.sin(heading - headOnBearing));
-        setTurnGunRightRadians(2 * Utils.normalRelativeAngle(linearBearing - getGunHeadingRadians()));
+        // Turn gun to shoot ahead of enemy if moving
+        if (!m.stationary) {
+                double headOnBearing = getHeadingRadians() + m.bearingR;
+                double linearBearing = headOnBearing + Math.asin(m.velocity / Rules.getBulletSpeed(power) * Math.sin(m.heading - headOnBearing));
+                setTurnGunRightRadians(2 * Utils.normalRelativeAngle(linearBearing - getGunHeadingRadians()));
+        } else {
+                setTurnGunRightRadians(m.bearingR);
+        }
         fire(power);
 
 }
@@ -115,104 +124,62 @@ public void smartFire(String bot) {
  */
 public void onScannedRobot(ScannedRobotEvent e) {
 
-        if (normal) {
-                if (rescanCount > 20) {
-                        rescanCount = 0;
-                        rescan();
-                }
-
-                updateLists();
-                rescanCount += 1;
-
-                // always square off against our enemy
-                try {
-                        double amt = normalizeBearing(botBearList.get(closest) + 90);
-                        // if (amt < getHeading() + 1 && amt > getHeading() - 1) {
-                                setTurnRight(amt);
-                        // } else {
-                                // out.println("No need to turn.");
-                        // }
-                } catch (NullPointerException exception) {
-                        out.println("No bot defined in closest.");
-                }
-
-                // strafe by changing direction every 25 ticks
-                if (getTime() > lastTime + 30) {
-                        moveDirection *= -1;
-                        setAhead(randInt(130, 170) * moveDirection);
-                        lastTime = getTime();
-                }
-
-
-
-                // Lock Radar
-                if (radar == "lock") {
-                        double angleToEnemy = getHeadingRadians() + e.getBearingRadians();
-                        double radarTurn = Utils.normalRelativeAngle(angleToEnemy - getRadarHeadingRadians());
-                        double extraTurn = Math.min(Math.atan(70.0 / e.getDistance()), Rules.RADAR_TURN_RATE_RADIANS);
-                        if (radarTurn < 0) {
-                                radarTurn -= extraTurn;
-                        } else {
-                                radarTurn += extraTurn;
-                        }
-
-                        setTurnRadarRightRadians(radarTurn);
-                }
-
-                // Stop and Go code for avoidance
-                //try {
-                // if (getDistanceRemaining() == 0.0 && botEnrgList.get(e.getName()) - e.getEnergy() < 3.0) {
-                //  //setTurnRight(square_angle);
-                //  //setAhead(36 * speed);
-                // }
-                //} catch (NullPointerException exception) {
-                // out.println("Bot " + e.getName() + " not in List.");
-                //}
+        if (!rescanning) {
+                // Lock radar
+                double angleToEnemy = getHeadingRadians() + e.getBearingRadians();
+                double radarTurn = Utils.normalRelativeAngle( angleToEnemy - getRadarHeadingRadians() );
+                double extraTurn = Math.min( Math.atan( 60.0 / e.getDistance() ), Rules.RADAR_TURN_RATE_RADIANS );
+                if (radarTurn < 0)
+                        radarTurn -= extraTurn;
+                else
+                        radarTurn += extraTurn;
+                setTurnRadarRightRadians(radarTurn);
+                // End Radar Lock Code
         }
+        botList.put(e.getName(), new ScannedRobot(e));
 
-        // Update botlists
-        botTimeList.put(e.getName(), getTime());
-        botDistList.put(e.getName(), e.getDistance());
-        botBearList.put(e.getName(), e.getBearingRadians());
-        botVeloList.put(e.getName(), e.getVelocity());
-        botHeadList.put(e.getName(), e.getHeadingRadians());
-        botEnrgList.put(e.getName(), e.getEnergy());
+        // Oscillator movement
+        if (getDistanceRemaining() == 0) { moveDirection *= -1; setAhead(185 * moveDirection); }
+        setTurnRightRadians(e.getBearingRadians() + Math.PI/2 - 0.5236 * moveDirection * (e.getDistance() > 200 ? 1 : -1));
 
-        if (normal) {
+
+
+        if (!rescanning) {
+                trimBotList();
+
                 // Determine closest bot
-                double dist = 10000.0;
-                String name = "";
+                double closestDist = 10000.0;
+                String closestName = "";
 
-                for (Map.Entry m: botDistList.entrySet()) {
+                for (Map.Entry enemy: botList.entrySet()) {
+                        ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
                         //out.println(m.getKey() +" " + m.getValue());
-                        if (Double.parseDouble(String.valueOf(m.getValue())) <= dist) {
-                                //dist = m.getValue();
-                                dist = Double.parseDouble(String.valueOf(m.getValue()));
-                                name = m.getKey().toString();
+                        if (m.distance <= closestDist) {
+                                closestDist = m.distance;
+                                closestName = m.name;
                         }
                 }
 
-                closest = name;
+                // square_angle = Math.abs(botList.get(closestName).heading - 90);
+                // turnRight(square_angle);
 
-                square_angle = botBearList.get(name) + 90;
+                for (int i=0; i<11; i++) {
+                        out.println();
+                }
 
-                //for(int x = 0; x < 50; x = x + 1) {
-                // out.println();
-                //}
-                out.println("------------");
-
-                for (Map.Entry m: botDistList.entrySet()) {
-                        out.println("Bot:       " + m.getKey());
-                        out.println("Dist:      " + m.getValue());
+                for (Map.Entry enemy: botList.entrySet()) {
+                        ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
+                        out.println("--- "+m.name+" ---");
+                        out.println("Dist:      " + m.distance);
+                        out.println("Update:    " + m.lastUpdate + "/" + getTime());
+                        out.println("Stat.:     " + m.stationary);
+                        out.println("           X: " + m.X + " Y: "+ m.Y);
                 }
                 out.println();
-                out.println("Tracking:  " + name);
-                out.println("Rescan:    " + !normal + "   Rcount: " + rescanCount);
-                out.println("S-Angle:   " + square_angle);
-                out.println("lastTime:  " + lastTime);
-                out.println("getTime(): " + getTime());
+                out.println("Tracking:  " + closestName);
+                out.println("rescann:   " + rescanning);
 
-                smartFire(name);
+                smartFire(closestName);
         }
 }
 
@@ -221,67 +188,71 @@ public void onScannedRobot(ScannedRobotEvent e) {
  */
 public void onHitByBullet(HitByBulletEvent e) {
         // Replace the next line with any behavior you would like
-        speed = speed * 2;
+        moveDirection *= -1;
 }
 
+public void trimBotList() {
+        List<String> toRemove = new ArrayList<String>();
+
+        for (Map.Entry enemy: botList.entrySet()) {
+                ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
+                if (m.lastUpdate < getTime() - 10) {
+                        toRemove.add(m.name);
+                }
+        }
+
+        for (String s: toRemove) {
+                botList.remove(s);
+        }
+}
 
 public void onBulletHit(BulletHitEvent e) {
 
         // Update Bot's Energy so my bot doesn't unessecarily
         // move when it detects the energy drop caused by my hit
-        botEnrgList.put(e.getName(), e.getEnergy());
+        try {
+                botList.get(e.getName()).bulletUpdate(e);
+        } catch (NullPointerException ex) {
+        }
 }
 public void onRobotDeath(RobotDeathEvent e) {
-        botTimeList.remove(e.getName());
-        botDistList.remove(e.getName());
-        botBearList.remove(e.getName());
-        botVeloList.remove(e.getName());
-        botHeadList.remove(e.getName());
-        botEnrgList.remove(e.getName());
-}
-
-public void updateLists() {
-
-        // Update botlists
-        for (Map.Entry m: botTimeList.entrySet()) {
-
-                //out.println(m.getValue());
-
-                long oldTime = (Long) m.getValue();
-
-                if (oldTime <= (getTime() - 50)) {
-                        botTimeList.remove(m.getKey());
-                        botDistList.remove(m.getKey());
-                        botBearList.remove(m.getKey());
-                        botVeloList.remove(m.getKey());
-                        botHeadList.remove(m.getKey());
-                        botEnrgList.remove(m.getKey());
-                }
-        }
-
-}
-
-public void rescan() {
-        out.println("------------------------");
-        out.println("Rescan...");
-        out.println("------------------------");
-        normal = false;
-        //stop();
-        setTurnRadarRight(360);
-        normal = true;
+        botList.remove(e.getName());
 }
 
 
 public void onHitRobot(HitRobotEvent e) {
-        setTurnGunRight(e.getBearing());
-        fire(3);
+        moveDirection *= -1;
+        turnRadarRight(e.getBearing());
+
 }
 
 public void onPaint(Graphics2D g) {
-        // Set the paint color to red
-        g.setColor(java.awt.Color.RED);
-        // Paint a filled rectangle at (50,50) at size 100x150 pixels
-        g.fillRect(65, 65, 65, 65);
+        for (Map.Entry enemy:botList.entrySet()) {
+                ScannedRobot e = ScannedRobot.class.cast(enemy.getValue());
+
+                int x = e.X;
+                int y = e.Y;
+
+                // double px = e.pX;
+                // double py = e.pY;
+
+                int r;
+                r = 36;
+                x = x-(r/2);
+                y = y-(r/2);
+
+                // Draw circle on enemies last pos
+                g.setColor(new java.awt.Color((int) (255 - (int) e.distance/4),(int) (e.distance/3),0));
+                g.fillOval(x,y,r,r);
+
+                g.setColor(Color.blue);
+                g.drawString(Long.toString(e.lastUpdate),x,y + 60);
+
+                // // Draw green circle on enemies predicted pos
+                // g.setColor(new java.awt.Color(0,255,0,255));
+                // g.fillOval((int)x,(int) y,r,r);
+
+        }
 }
 
 public static int randInt(int min, int max) {
@@ -299,7 +270,7 @@ public static int randInt(int min, int max) {
  */
 public void onHitWall(HitWallEvent e) {
         // Replace the next line with any behavior you would like
-        speed = -speed;
+        turnRight(90);
 }
 
 // normalizes a bearing to between +180 and -180
@@ -311,8 +282,82 @@ double normalizeBearing(double angle) {
 
 
 public void onWin(WinEvent e) {
-        turnRight(1000);
-        ahead(5000);
+        setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+        setTurnGunLeftRadians(Double.POSITIVE_INFINITY);
+        setTurnRight(1000);
+        ahead(1000);
 }
+
+class ScannedRobot {
+String name;
+int X;
+int Y;
+// double pX;
+// double pY;
+double energy;
+double bearing;
+double bearingR;
+double heading;
+double velocity;
+double distance;
+long lastUpdate;
+boolean stationary;
+
+
+ScannedRobot(ScannedRobotEvent e) {
+        name = e.getName();
+        updateBot(e);
+}
+
+void updateBot(ScannedRobotEvent e) {
+        lastUpdate = getTime();
+        distance = e.getDistance();
+        energy = e.getEnergy();
+        bearing = e.getBearing();
+        bearingR = e.getBearingRadians();
+        heading = e.getHeading();
+        velocity = e.getVelocity();
+
+        // Point2D.Double ppos = getPredictedPos(e);
+        // pX = ppos.x;
+        // pY = ppos.y;
+
+        Point2D.Double pos = getPos(e);
+
+        if ( pos.x >= X-10 && pos.x <= X+10 &&
+             pos.y >= Y-10 && pos.y <= Y+10) {
+                stationary = true;
+        } else {
+                stationary = false;
+        }
+
+        X = (int) pos.x;
+        Y = (int) pos.y;
+
+
+}
+
+void bulletUpdate(BulletHitEvent e) {
+        energy = e.getEnergy();
+}
+
+Point2D.Double getPos(ScannedRobotEvent event) {
+        double distance = event.getDistance();
+        double angle = getHeadingRadians() + event.getBearingRadians();
+
+        double x = getX() + Math.sin(angle) * distance;
+        double y = getY() + Math.cos(angle) * distance;
+
+        return new Point2D.Double(x, y);
+}
+
+
+
+}
+
+private double limit(double value, double min, double max) {
+        return Math.min(max, Math.max(min, value));
+}
+
 
 }
