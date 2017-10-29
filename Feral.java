@@ -33,7 +33,7 @@ boolean rescanning = false;
 long lastScan = 0;
 
 double square_angle = 90;
-int moveDirection = 1;
+byte moveDirection = 1;
 long lastTime = 0;
 
 // New scan vars
@@ -61,13 +61,6 @@ public void run() {
                 setAhead(0);
                 if ( getRadarTurnRemaining() == 0.0 ) {
                         setTurnRadarRightRadians( Double.POSITIVE_INFINITY );
-                }
-
-                if (lastScan < getTime() - 40) {
-                        lastScan = getTime();
-                        rescanning = true;
-                        turnRadarRight(360);
-                        rescanning = false;
                 }
 
                 execute();
@@ -125,6 +118,14 @@ public void smartFire(String bot) {
 public void onScannedRobot(ScannedRobotEvent e) {
 
         if (!rescanning) {
+
+                if (getOthers() > 1 && lastScan < getTime() - 50) {
+                        lastScan = getTime();
+                        rescanning = true;
+                        setTurnRadarRight(360);
+                        rescanning = false;
+                }
+
                 // Lock radar
                 double angleToEnemy = getHeadingRadians() + e.getBearingRadians();
                 double radarTurn = Utils.normalRelativeAngle( angleToEnemy - getRadarHeadingRadians() );
@@ -136,12 +137,13 @@ public void onScannedRobot(ScannedRobotEvent e) {
                 setTurnRadarRightRadians(radarTurn);
                 // End Radar Lock Code
         }
+
         botList.put(e.getName(), new ScannedRobot(e));
 
-        // Oscillator movement
-        if (getDistanceRemaining() == 0) { moveDirection *= -1; setAhead(185 * moveDirection); }
-        setTurnRightRadians(e.getBearingRadians() + Math.PI/2 - 0.5236 * moveDirection * (e.getDistance() > 200 ? 1 : -1));
 
+        // Oscillator movement
+        if (getDistanceRemaining() == 0) { moveDirection *= -1; setAhead(185 * moveDirection * ((randDouble()/2) + 0.75)); }
+        setTurnRightRadians(e.getBearingRadians() + Math.PI/2 - 0.5236 * moveDirection * (e.getDistance() > 200 ? 1 : -1));
 
 
         if (!rescanning) {
@@ -169,15 +171,15 @@ public void onScannedRobot(ScannedRobotEvent e) {
 
                 for (Map.Entry enemy: botList.entrySet()) {
                         ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
-                        out.println("--- "+m.name+" ---");
+                        out.println("--- " + m.name + " ---");
                         out.println("Dist:      " + m.distance);
                         out.println("Update:    " + m.lastUpdate + "/" + getTime());
                         out.println("Stat.:     " + m.stationary);
                         out.println("           X: " + m.X + " Y: "+ m.Y);
                 }
+
                 out.println();
                 out.println("Tracking:  " + closestName);
-                out.println("rescann:   " + rescanning);
 
                 smartFire(closestName);
         }
@@ -227,31 +229,38 @@ public void onHitRobot(HitRobotEvent e) {
 }
 
 public void onPaint(Graphics2D g) {
-        for (Map.Entry enemy:botList.entrySet()) {
-                ScannedRobot e = ScannedRobot.class.cast(enemy.getValue());
-
-                int x = e.X;
-                int y = e.Y;
-
-                // double px = e.pX;
-                // double py = e.pY;
-
-                int r;
-                r = 36;
-                x = x-(r/2);
-                y = y-(r/2);
-
-                // Draw circle on enemies last pos
-                g.setColor(new java.awt.Color((int) (255 - (int) e.distance/4),(int) (e.distance/3),0));
-                g.fillOval(x,y,r,r);
-
+        if (rescanning) {
                 g.setColor(Color.blue);
-                g.drawString(Long.toString(e.lastUpdate),x,y + 60);
+                int x = (int) (getX() - 100.0);
+                int y = (int) (getY() - 100.0);
+                g.drawOval(x,y,100,100);
+        } else {
+                for (Map.Entry enemy:botList.entrySet()) {
+                        ScannedRobot e = ScannedRobot.class.cast(enemy.getValue());
 
-                // // Draw green circle on enemies predicted pos
-                // g.setColor(new java.awt.Color(0,255,0,255));
-                // g.fillOval((int)x,(int) y,r,r);
+                        int x = e.X;
+                        int y = e.Y;
 
+                        // double px = e.pX;
+                        // double py = e.pY;
+
+                        int r;
+                        r = 36;
+                        x = x-(r/2);
+                        y = y-(r/2);
+
+                        // Draw circle on enemies last pos
+                        g.setColor(new java.awt.Color((int) (255 - (int) e.distance/4),(int) (e.distance/3),0));
+                        g.fillOval(x,y,r,r);
+
+                        g.setColor(Color.blue);
+                        g.drawString(Long.toString(e.lastUpdate),x,y + 60);
+
+                        // // Draw green circle on enemies predicted pos
+                        // g.setColor(new java.awt.Color(0,255,0,255));
+                        // g.fillOval((int)x,(int) y,r,r);
+
+                }
         }
 }
 
@@ -262,6 +271,12 @@ public static int randInt(int min, int max) {
         // so add 1 to make it inclusive
         int randomNum = rand.nextInt((max - min) + 1) + min;
 
+        return randomNum;
+}
+
+public static double randDouble() {
+        Random rand = new Random();
+        double randomNum = rand.nextDouble();
         return randomNum;
 }
 
@@ -279,7 +294,6 @@ double normalizeBearing(double angle) {
         while (angle < -180) angle += 360;
         return angle;
 }
-
 
 public void onWin(WinEvent e) {
         setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
@@ -324,8 +338,8 @@ void updateBot(ScannedRobotEvent e) {
 
         Point2D.Double pos = getPos(e);
 
-        if ( pos.x >= X-10 && pos.x <= X+10 &&
-             pos.y >= Y-10 && pos.y <= Y+10) {
+        if ( (Math.abs(pos.x - X) < .00001) &&
+             (Math.abs(pos.y - Y) < .00001)) {
                 stationary = true;
         } else {
                 stationary = false;
