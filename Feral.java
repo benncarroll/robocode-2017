@@ -36,8 +36,9 @@ double square_angle = 90;
 byte moveDirection = 1;
 long lastTime = 0;
 
-// New scan vars
 double scanDir = 1;
+
+double oldEnemyHeading;
 
 Map<String, ScannedRobot> botList = new HashMap<String, ScannedRobot>();
 
@@ -99,14 +100,30 @@ public void smartFire(String bot) {
                 power = power/2;
         }
 
-        // Turn gun to shoot ahead of enemy if moving
-        if (!m.stationary) {
-                double headOnBearing = getHeadingRadians() + m.bearingR;
-                double linearBearing = headOnBearing + Math.asin(m.velocity / Rules.getBulletSpeed(power) * Math.sin(m.heading - headOnBearing));
-                setTurnGunRightRadians(2 * Utils.normalRelativeAngle(linearBearing - getGunHeadingRadians()));
-        } else {
-                setTurnGunRightRadians(m.bearingR);
+        // Turn gun to shoot ahead of enemy
+
+        double enemyHeading = m.headingR;
+        double enemyHeadingChange = enemyHeading - oldEnemyHeading;
+        oldEnemyHeading = enemyHeading;
+        double absBearing = m.bearingR + getHeadingRadians();
+        double deltaTime = 0.0;
+        double pX = getX() + m.distance * Math.sin(absBearing);
+        double pY = getY() + m.distance * Math.cos(absBearing);
+        while (++deltaTime * 11.0D < Point2D.Double.distance(getX(), getY(), pX, pY))
+        {
+                pX += Math.sin(enemyHeading) * m.velocity;
+                pY += Math.cos(enemyHeading) * m.velocity;
+
+                enemyHeading += enemyHeadingChange;
+
+                pX = Math.max(Math.min(pX, getBattleFieldWidth() - 18.0D), 18.0D);
+                pY = Math.max(Math.min(pY, getBattleFieldHeight() - 18.0D), 18.0D);
         }
+
+        double gunTurnAngle = Utils.normalAbsoluteAngle(Math.atan2(pX - getX(), pY - getY()));
+        setTurnGunRightRadians(Utils.normalRelativeAngle(gunTurnAngle - getGunHeadingRadians()));
+
+
         fire(power);
 
 }
@@ -312,6 +329,7 @@ double energy;
 double bearing;
 double bearingR;
 double heading;
+double headingR;
 double velocity;
 double distance;
 long lastUpdate;
@@ -330,6 +348,7 @@ void updateBot(ScannedRobotEvent e) {
         bearing = e.getBearing();
         bearingR = e.getBearingRadians();
         heading = e.getHeading();
+        headingR = e.getHeadingRadians();
         velocity = e.getVelocity();
 
         // Point2D.Double ppos = getPredictedPos(e);
