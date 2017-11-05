@@ -2,15 +2,15 @@
 
 ### Overview
 
-Feral is a bot built to participate in a class melee competition, and is built off the AdvancedRobot class.
+Feral is a bot built to participate in a class melee competition, and is built off the AdvancedRobot class. It makes use of many advanced Robocode techniques, including predictive targeting, strafing movement and a locking radar.
 
 ### Targeting
 
-Feral uses a linear targeting algorithm to shoot at enemies predicted positions. To find and gather data about enemies, it locks its radar onto the closest bot to get data as fast as possible. Every 50 turns, it turns the radar 360 degrees to re-calculate the closest bot.
+Feral uses a predictive targeting algorithm to shoot at enemies predicted positions. To find and gather data about enemies, it locks its radar onto the closest bot to get data as fast as possible. Every 50 turns, it turns the radar 360 degrees to re-calculate the closest bot.
 
 ### Movement
 
-Feral uses strafing movement, and keeps itself perpendicular to its angle to the enemy. It chooses a random distance between 25% above and below 185px to move after each turn. Its movement is based entirely off the robot it is currently tracking.
+Feral uses a strafing movement strategy and keeps itself perpendicular to its angle to the enemy. This helps us vary our position to throw off enemy targeting. It chooses a random distance between 25% above and below 185px to move after each turn. Its movement is based entirely off the robot it is currently tracking.
 
 ### Cool Features
 
@@ -21,10 +21,28 @@ Feral will automatically disable its rescan feature if there is only one bot lef
 ### See it in action
 
 #### Feral vs. Tracker
-![Feral vs. Tracker](img/FeralvTracker.gif)
+![FeralvTracker|150x150](img/FeralvTracker.gif)
 
 #### Feral vs. Crazy
-![Feral vs. Crazy](img/FeralvCrazy.gif)
+![FeralvCrazy|150x150](img/FeralvCrazy.gif)
 
 #### Feral vs. VelociRobot
-![Feral vs. VelociRobot](img/FeralvVelociRobot.gif)
+![FeralvVelociRobot|150x150](img/FeralvVelociRobot.gif)
+
+
+### Win Rates
+
+300 rounds were run against each bot, and the win rate was averaged over these simulations.
+
+| Robot Name | Win Rate |
+|-:|:-|-|
+| MyFirstRobot | 100% |
+| Crazy | 100% |
+| RamFire | 98% |
+| VelociRobot | 100% |
+| TrackFire | 96% |
+| SpinBot | 100% |
+| Walls | 100% |
+| Neff (30/10) | 99% |
+| JamesBot (01/11) | 99% |
+| Gordon (30/10) | 100% |

@@ -66,6 +66,7 @@ public void run() {
 
                 // If we don't see any bots, start a really wide curve
                 if (botList.size() == 0.0) {
+                        target = "";
                         setTurnRight(0.1);
                         setAhead(500);
                 }
@@ -87,14 +88,12 @@ public void smartFire(String bot) {
         double power = .1;
 
         // Determine power based on enemy distance
-        if (m.distance < 80) {
+        if (m.distance < 150) {
                 power = 3;
-        } else if (m.distance < 150) {
-                power = 2;
         } else if (m.distance < 250) {
-                power = 1.5;
+                power = 2;
         } else if (m.distance < 400) {
-                power = 0.5;
+                power = 1.5;
         }
 
         // Determine power based on my energy
@@ -121,7 +120,7 @@ public void smartFire(String bot) {
         double deltaTime = 0.0;
         double pX = getX() + m.distance * Math.sin(absBearing);
         double pY = getY() + m.distance * Math.cos(absBearing);
-        while (++deltaTime * (20- power * power) < Point2D.Double.distance(getX(), getY(), pX, pY))
+        while (++deltaTime * (20 - (3 * power)) < Point2D.Double.distance(getX(), getY(), pX, pY))
         {
                 // Triggerednometry
                 pX += Math.sin(enemyHeading) * m.velocity;
@@ -155,7 +154,7 @@ public void smartFire(String bot) {
  */
 public void onScannedRobot(ScannedRobotEvent e) {
 
-        if (e.getName().contains(ally) && getOthers() > 1) {
+        if (e.getName().contains(ally) && getOthers() > 2) {
                 return;
         }
 
@@ -166,7 +165,7 @@ public void onScannedRobot(ScannedRobotEvent e) {
                 if (getOthers() > 1 && lastScan < getTime() - 50) {
                         lastScan = getTime();
                         rescanning = true;
-                        setTurnRadarRight(360);
+                        turnRadarRight(360);
                         rescanning = false;
                 }
 
@@ -207,6 +206,7 @@ public void onScannedRobot(ScannedRobotEvent e) {
 
                 smartFire(closestName);
 
+
                 outputStream();
         }
 }
@@ -215,7 +215,7 @@ public void onScannedRobot(ScannedRobotEvent e) {
  * onHitByBullet: What to do when you're hit by a bullet
  */
 public void onHitByBullet(HitByBulletEvent e) {
-        // Replace the next line with any behavior you would like
+        // Turn us around
         moveDirection *= -1;
 }
 
@@ -295,6 +295,7 @@ public void outputStream() {
 
         out.println();
         out.println("Tracking:  " + target);
+        out.println("lastScan:  " + lastScan+"/"+getTime());
 
 }
 
@@ -306,37 +307,38 @@ public void onPaint(Graphics2D g) {
                 int y = (int) (getY() - 50.0);
                 g.drawOval(x,y,100,100);
         } else {
+                if (botList.size() > 0) {
+                        ScannedRobot m = ScannedRobot.class.cast(botList.get(target));
 
-                ScannedRobot m = ScannedRobot.class.cast(botList.get(target));
+                        // gather coords from bot data
+                        int x = m.X;
+                        int y = m.Y;
+                        int px = (int) m.pX;
+                        int py = (int) m.pY;
 
-                // gather coords from bot data
-                int x = m.X;
-                int y = m.Y;
-                int px = (int) m.pX;
-                int py = (int) m.pY;
+                        int r = 36;
 
-                int r = 36;
-
-                // c for circle, vars to be used in circle drawings
-                int cx = x-(r/2);
-                int cy = y-(r/2);
-                int cpx = px-(r/2);
-                int cpy = py-(r/2);
+                        // c for circle, vars to be used in circle drawings
+                        int cx = x-(r/2);
+                        int cy = y-(r/2);
+                        int cpx = px-(r/2);
+                        int cpy = py-(r/2);
 
 
-                // Draw circle on enemies last pos
-                g.setColor(new java.awt.Color((int) limit((255 - (int) m.distance/4), 0, 255), (int) limit((m.distance/3), 0, 255), 0));
-                g.fillOval(cx,cy,r,r);
+                        // Draw circle on enemies last pos
+                        g.setColor(new java.awt.Color((int) limit((255 - (int) m.distance/4), 0, 255), (int) limit((m.distance/3), 0, 255), 0));
+                        g.fillOval(cx,cy,r,r);
 
-                // Draw green circle on enemies predicted pos
-                g.setColor(new java.awt.Color(0,255,0,255));
-                g.fillOval((int) cpx,(int) cpy,r,r);
-                g.drawLine(x,y,px,py);
+                        // Draw green circle on enemies predicted pos
+                        g.setColor(new java.awt.Color(0,255,0,255));
+                        g.fillOval((int) cpx,(int) cpy,r,r);
+                        g.drawLine(x,y,px,py);
 
-                // Shows the turn this bot's data was last updated.
-                // -- No longer necessary as we cull 'old' bot data
-                // g.setColor(Color.blue);
-                // g.drawString(Long.toString(m.lastUpdate),cx,cy + 60);
+                        // Shows the turn this bot's data was last updated.
+                        // -- No longer necessary as we cull 'old' bot data
+                        // g.setColor(Color.blue);
+                        // g.drawString(Long.toString(m.lastUpdate),cx,cy + 60);
+                }
         }
 }
 
