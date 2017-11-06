@@ -1,21 +1,16 @@
 
 package ist;
-
 import robocode.*;
 import robocode.util.*;
 import static robocode.util.Utils.normalRelativeAngleDegrees;
-
-
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
-
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.lang.*;
 
 // |-|                          This is Feral.                          |-|
@@ -23,25 +18,23 @@ import java.lang.*;
 // |-|  predictive targeting, oscillator movement and a locking radar.  |-|
 // |-|                            good luck ;p                          |-|
 
-
 public class Feral extends AdvancedRobot {
 
-// Setup global vars
+/////////////////////////////
+// Define global variables //
+/////////////////////////////
 boolean rescanning = false;
 byte moveDirection = 1;
-
 double enemyHeadingChange;
 double oldEnemyHeading;
-
 long lastScan = 0;
-long lastTime = 0;
-
 String target;
 String ally = "PHA";
-
-
-// Database
 Map<String, ScannedRobot> botList = new HashMap<String, ScannedRobot>();
+
+/////////////////////////////////
+// Primary operation functions //
+/////////////////////////////////
 
 public void run() {
 
@@ -175,6 +168,9 @@ public void smartFire() {
 
 }
 
+//////////////////////////////
+// Robocode event functions //
+//////////////////////////////
 public void onScannedRobot(ScannedRobotEvent e) {
 
         if (e.getName().contains(ally) && getOthers() > 2) {
@@ -224,21 +220,6 @@ public void onHitByBullet(HitByBulletEvent e) {
         moveDirection *= -1;
 }
 
-public void trimBotList() {
-        List<String> toRemove = new ArrayList<String>();
-
-        for (Map.Entry enemy: botList.entrySet()) {
-                ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
-                if (m.lastUpdate < getTime() - 10) {
-                        toRemove.add(m.name);
-                }
-        }
-
-        for (String s: toRemove) {
-                botList.remove(s);
-        }
-}
-
 public void onBulletHit(BulletHitEvent e) {
 
         // Update Bot's Energy so my bot doesn't unessecarily
@@ -278,25 +259,6 @@ public void onHitRobot(HitRobotEvent e) {
 
         // Add our bot to our main list
         botList.put(e.getName(), new ScannedRobot(m));
-
-}
-
-public void outputStream() {
-
-        // Clear some space
-        for (int i=0; i<11; i++) {
-                out.println();
-        }
-
-        // Print out data on every bot in our database
-        for (Map.Entry enemy: botList.entrySet()) {
-                ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
-                out.println("--- " + m.name + " ---");
-                out.println("Dist:      " + m.distance);
-        }
-
-        out.println();
-        out.println("Tracking:  " + target);
 
 }
 
@@ -343,6 +305,58 @@ public void onPaint(Graphics2D g) {
         }
 }
 
+public void onHitWall(HitWallEvent e) {
+        turnRight(90);
+}
+
+public void onWin(WinEvent e) {
+        // Spin EVERYTHING
+        setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+        setTurnGunLeftRadians(Double.POSITIVE_INFINITY);
+        setTurnRight(1000);
+        ahead(1000);
+}
+
+//////////////////////
+// Custom functions //
+//////////////////////
+public void trimBotList() {
+        List<String> toRemove = new ArrayList<String>();
+
+        for (Map.Entry enemy: botList.entrySet()) {
+                ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
+                if (m.lastUpdate < getTime() - 10) {
+                        toRemove.add(m.name);
+                }
+        }
+
+        for (String s: toRemove) {
+                botList.remove(s);
+        }
+}
+
+public void outputStream() {
+
+        // Clear some space
+        for (int i=0; i<11; i++) {
+                out.println();
+        }
+
+        // Print out data on every bot in our database
+        for (Map.Entry enemy: botList.entrySet()) {
+                ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
+                out.println("--- " + m.name + " ---");
+                out.println("Dist:      " + m.distance);
+        }
+
+        out.println();
+        out.println("Tracking:  " + target);
+
+}
+
+//////////////////////
+// Helper functions //
+//////////////////////
 public static int randInt(int min, int max) {
         Random rand = new Random();
 
@@ -360,25 +374,19 @@ public static double randDouble() {
         return randomNum;
 }
 
-public void onHitWall(HitWallEvent e) {
-        turnRight(90);
+public double limit(double value, double min, double max) {
+        // very very handy function
+        return Math.min(max, Math.max(min, value));
 }
 
-double normalizeBearing(double angle) {
+public double normalizeBearing(double angle) {
         // normalizes a bearing to between +180 and -180 iteratively
         while (angle > 180) angle -= 360;
         while (angle < -180) angle += 360;
         return angle;
 }
 
-public void onWin(WinEvent e) {
-        // Spin EVERYTHING
-        setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
-        setTurnGunLeftRadians(Double.POSITIVE_INFINITY);
-        setTurnRight(1000);
-        ahead(1000);
-}
-
+// Classes
 class ScannedRobot {
   String name;
   int X;
@@ -448,11 +456,6 @@ class ScannedRobot {
 
 
 
-}
-
-private double limit(double value, double min, double max) {
-        // very very handy function
-        return Math.min(max, Math.max(min, value));
 }
 
 }
