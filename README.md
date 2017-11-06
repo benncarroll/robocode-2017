@@ -35,7 +35,7 @@ Feral will automatically disable its rescan feature if there is only one bot lef
 300 rounds were run against each bot, and the win rate was averaged over these simulations.
 
 | Robot Name | Win Rate |
-|-:|:-|-|
+|-:|:-|
 | MyFirstRobot | 100% |
 | Crazy | 100% |
 | RamFire | 98% |
@@ -46,3 +46,14 @@ Feral will automatically disable its rescan feature if there is only one bot lef
 | Neff (30/10) | 99% |
 | JamesBot (01/11) | 99% |
 | Gordon (30/10) | 100% |
+
+
+### Radar comparisons
+
+I am in the process of experimenting with different types of radar. Here are some bullet damage scores from 100 rounds of each radar.
+
+| Radar Type | Bullet Damage |
+|-:|:-|
+| Width Lock Radar | 14204 |
+| The Infinity Lock | 11001 |
+| Turn Multiplier Lock | 4060 |

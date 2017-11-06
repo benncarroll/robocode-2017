@@ -71,6 +71,7 @@ public void run() {
                         setAhead(500);
                 }
 
+
                 // Stops the robot from getting disabled
                 setAhead(0);
                 execute();
@@ -78,11 +79,37 @@ public void run() {
         }
 }
 
-public void smartFire(String bot) {
+public void smartRadar() {
 
-        target = bot;
+        ScannedRobot m = ScannedRobot.class.cast(botList.get(target));
 
-        ScannedRobot m = ScannedRobot.class.cast(botList.get(bot));
+        // Lock radar
+        double angleToEnemy = getHeadingRadians() + m.bearingR;
+        double radarTurn = Utils.normalRelativeAngle( angleToEnemy - getRadarHeadingRadians() );
+        double extraTurn = Math.min( Math.atan( 150.0 / m.distance ), Rules.RADAR_TURN_RATE_RADIANS );
+        if (radarTurn < 0) {
+                radarTurn -= extraTurn;
+        }
+        else {
+                radarTurn += extraTurn;
+        }
+        setTurnRadarRightRadians(radarTurn);
+        // End Radar Lock Code
+
+}
+
+public void smartMove() {
+
+        ScannedRobot m = ScannedRobot.class.cast(botList.get(target));
+
+        // Oscillator movement
+        if (getDistanceRemaining() == 0) { moveDirection *= -1; setAhead(185 * moveDirection * ((randDouble()/2) + 0.75)); }
+        setTurnRightRadians(m.bearingR + Math.PI/2 - 0.5236 * moveDirection * (m.distance > 200 ? 1 : -1));
+}
+
+public void smartFire() {
+
+        ScannedRobot m = ScannedRobot.class.cast(botList.get(target));
 
         double myEnergy = getEnergy();
         double power = .1;
@@ -148,15 +175,14 @@ public void smartFire(String bot) {
 
 }
 
-
-/**
- * onScannedRobot: What to do when you see another robot
- */
 public void onScannedRobot(ScannedRobotEvent e) {
 
         if (e.getName().contains(ally) && getOthers() > 2) {
                 return;
         }
+
+        // Add scanned bot to botList
+        botList.put(e.getName(), new ScannedRobot(e));
 
         if (!rescanning) {
 
@@ -169,51 +195,30 @@ public void onScannedRobot(ScannedRobotEvent e) {
                         rescanning = false;
                 }
 
-                // Lock radar
-                double angleToEnemy = getHeadingRadians() + e.getBearingRadians();
-                double radarTurn = Utils.normalRelativeAngle( angleToEnemy - getRadarHeadingRadians() );
-                double extraTurn = Math.min( Math.atan( 70.0 / e.getDistance() ), Rules.RADAR_TURN_RATE_RADIANS );
-                if (radarTurn < 0)
-                        radarTurn -= extraTurn;
-                else
-                        radarTurn += extraTurn;
-                setTurnRadarRightRadians(radarTurn);
-                // End Radar Lock Code
-        }
-
-        botList.put(e.getName(), new ScannedRobot(e));
-
-
-        // Oscillator movement
-        if (getDistanceRemaining() == 0) { moveDirection *= -1; setAhead(185 * moveDirection * ((randDouble()/2) + 0.75)); }
-        setTurnRightRadians(e.getBearingRadians() + Math.PI/2 - 0.5236 * moveDirection * (e.getDistance() > 200 ? 1 : -1));
-
-
-        if (!rescanning) {
+                // Cull old scans of bots
                 trimBotList();
 
                 // Determine closest bot
                 double closestDist = Double.MAX_VALUE;
-                String closestName = new String();
-
                 for (Map.Entry enemy: botList.entrySet()) {
                         ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
                         if (m.distance <= closestDist) {
                                 closestDist = m.distance;
-                                closestName = m.name;
+                                target = m.name;
                         }
                 }
 
-                smartFire(closestName);
+                // Update radar and fire
+                smartRadar();
+                smartFire();
 
-
-                outputStream();
         }
+
+        smartMove();
+        outputStream();
+
 }
 
-/**
- * onHitByBullet: What to do when you're hit by a bullet
- */
 public void onHitByBullet(HitByBulletEvent e) {
         // Turn us around
         moveDirection *= -1;
@@ -243,10 +248,10 @@ public void onBulletHit(BulletHitEvent e) {
         } catch (NullPointerException ex) {
         }
 }
+
 public void onRobotDeath(RobotDeathEvent e) {
         botList.remove(e.getName());
 }
-
 
 public void onHitRobot(HitRobotEvent e) {
 
@@ -288,14 +293,10 @@ public void outputStream() {
                 ScannedRobot m = ScannedRobot.class.cast(enemy.getValue());
                 out.println("--- " + m.name + " ---");
                 out.println("Dist:      " + m.distance);
-                out.println("Update:    " + m.lastUpdate + "/" + getTime());
-                out.println("Stat.:     " + m.stationary);
-                out.println("           X: " + m.X + " Y: "+ m.Y);
         }
 
         out.println();
         out.println("Tracking:  " + target);
-        out.println("lastScan:  " + lastScan+"/"+getTime());
 
 }
 
@@ -379,71 +380,71 @@ public void onWin(WinEvent e) {
 }
 
 class ScannedRobot {
-String name;
-int X;
-int Y;
-double pX;
-double pY;
-double energy;
-double bearing;
-double bearingR;
-double heading;
-double headingR;
-double velocity;
-double distance;
-long lastUpdate;
-boolean stationary;
+  String name;
+  int X;
+  int Y;
+  double pX;
+  double pY;
+  double energy;
+  double bearing;
+  double bearingR;
+  double heading;
+  double headingR;
+  double velocity;
+  double distance;
+  long lastUpdate;
+  boolean stationary;
 
 
-ScannedRobot(ScannedRobotEvent e) {
-        // Setting the name isn't in updateBot just to make sure
-        // stuff doesnt get corrupted
-        name = e.getName();
-        updateBot(e);
-}
+  ScannedRobot(ScannedRobotEvent e) {
+          // Setting the name isn't in updateBot just to make sure
+          // stuff doesnt get corrupted
+          name = e.getName();
+          updateBot(e);
+  }
 
-void updateBot(ScannedRobotEvent e) {
-        lastUpdate = getTime();
-        distance = e.getDistance();
-        energy = e.getEnergy();
-        bearing = e.getBearing();
-        bearingR = e.getBearingRadians();
-        heading = e.getHeading();
-        headingR = e.getHeadingRadians();
-        velocity = e.getVelocity();
+  void updateBot(ScannedRobotEvent e) {
+          lastUpdate = getTime();
+          distance = e.getDistance();
+          energy = e.getEnergy();
+          bearing = e.getBearing();
+          bearingR = e.getBearingRadians();
+          heading = e.getHeading();
+          headingR = e.getHeadingRadians();
+          velocity = e.getVelocity();
 
-        Point2D.Double pos = getPos(e);
+          Point2D.Double pos = getPos(e);
 
-        if ( (Math.abs(pos.x - X) < .00001) &&
-             (Math.abs(pos.y - Y) < .00001)) {
-                stationary = true;
-        } else {
-                stationary = false;
-        }
+          if ( (Math.abs(pos.x - X) < .00001) &&
+               (Math.abs(pos.y - Y) < .00001)) {
+                  stationary = true;
+          } else {
+                  stationary = false;
+          }
 
-        X = (int) pos.x;
-        Y = (int) pos.y;
+          X = (int) pos.x;
+          Y = (int) pos.y;
 
 
-}
+  }
 
-void bulletUpdate(BulletHitEvent e) {
-        // Not using StopNGo movement system anymore, not sure if we
-        // still need this.
-        energy = e.getEnergy();
-}
+  void bulletUpdate(BulletHitEvent e) {
+          // Not using StopNGo movement system anymore, not sure if we
+          // still need this.
+          energy = e.getEnergy();
+  }
 
-Point2D.Double getPos(ScannedRobotEvent event) {
-        // More trig
+  Point2D.Double getPos(ScannedRobotEvent event) {
+          // More trig
 
-        double distance = event.getDistance();
-        double angle = getHeadingRadians() + event.getBearingRadians();
+          double distance = event.getDistance();
+          double angle = getHeadingRadians() + event.getBearingRadians();
 
-        double x = getX() + Math.sin(angle) * distance;
-        double y = getY() + Math.cos(angle) * distance;
+          double x = getX() + Math.sin(angle) * distance;
+          double y = getY() + Math.cos(angle) * distance;
 
-        return new Point2D.Double(x, y);
-}
+          return new Point2D.Double(x, y);
+  }
 
 
 
@@ -453,6 +454,5 @@ private double limit(double value, double min, double max) {
         // very very handy function
         return Math.min(max, Math.max(min, value));
 }
-
 
 }
