@@ -1,4 +1,41 @@
 /*
+
+			   ____/\\\\\\\\\\\\\\\__/\\\\\\\\\\\\\\\____/\\\\\\\\\_________/\\\\\\\\\_____/\\\_____________
+			   ____\/\\\///////////__\/\\\///////////___/\\\///////\\\_____/\\\\\\\\\\\\\__\/\\\_____________
+			   _____\/\\\_____________\/\\\_____________\/\\\_____\/\\\____/\\\/////////\\\_\/\\\_____________
+			   ______\/\\\\\\\\\\\_____\/\\\\\\\\\\\_____\/\\\\\\\\\\\/____\/\\\_______\/\\\_\/\\\_____________
+			   _______\/\\\///////______\/\\\///////______\/\\\//////\\\____\/\\\\\\\\\\\\\\\_\/\\\_____________
+			   ________\/\\\_____________\/\\\_____________\/\\\____\//\\\___\/\\\/////////\\\_\/\\\_____________
+			   _________\/\\\_____________\/\\\_____________\/\\\_____\//\\\__\/\\\_______\/\\\_\/\\\_____________
+			   __________\/\\\_____________\/\\\\\\\\\\\\\\\_\/\\\______\//\\\_\/\\\_______\/\\\_\/\\\\\\\\\\\\\\\_
+			   ___________\///______________\///////////////__\///________\///__\///________\///__\///////////////__
+
+		   	 Welcome to Feral. Feral is a bot built to participate in a class melee competition,
+         and is built off the AdvancedRobot class. It makes use of many advanced Robocode
+         techniques, including predictive targeting, strafing movement and a locking radar.
+
+         - Targeting
+         Feral uses a predictive targeting algorithm to shoot at enemies predicted positions.
+         To find and gather data about enemies, it locks its radar onto the closest bot to
+         get data as fast as possible. Every 50 turns, it turns the radar 360 degrees to
+         re-calculate the closest bot.
+
+         - Movement
+         Feral uses a strafing movement strategy and keeps itself perpendicular to its
+         angle to the enemy. This helps it to vary its position to throw off enemy targeting.
+         It chooses a random distance around 185px to move after each turn. Its movement
+         is based entirely off the robot it is currently tracking.
+
+         Enjoy browsing the code!
+         - Ben
+
+ 			 	 * I would recommend folding the functions in order to get a broader overview
+           of the code, `fold-functions` works great for Atom.
+
+ */
+
+
+/*
         db      d888888b d8888b. d8888b.  .d8b.  d8888b. db    db
         88        `88'   88  `8D 88  `8D d8' `8b 88  `8D `8b  d8'
         88         88    88oooY' 88oobY' 88ooo88 88oobY'  `8bd8'

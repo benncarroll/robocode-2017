@@ -1,3 +1,20 @@
+/*
+
+			   ______/\\\\\\\\\\\\__/\\\______________/\\\________/\\\__/\\\\\\\\\\\\\\\_
+			   _____/\\\//////////__\/\\\_____________\/\\\_______\/\\\_\/\\\///////////__
+			   _____/\\\_____________\/\\\_____________\/\\\_______\/\\\_\/\\\_____________
+			   _____\/\\\____/\\\\\\\_\/\\\_____________\/\\\_______\/\\\_\/\\\\\\\\\\\_____
+			   ______\/\\\___\/////\\\_\/\\\_____________\/\\\_______\/\\\_\/\\\///////______
+			   _______\/\\\_______\/\\\_\/\\\_____________\/\\\_______\/\\\_\/\\\_____________
+			   ________\/\\\_______\/\\\_\/\\\_____________\//\\\______/\\\__\/\\\_____________
+			   _________\//\\\\\\\\\\\\/__\/\\\\\\\\\\\\\\\__\///\\\\\\\\\/___\/\\\\\\\\\\\\\\\_
+			   __________\////////////____\///////////////_____\/////////_____\///////////////__
+
+         Welcome to Glue. Glue is robot that is built off the exact same principles as
+         Feral, and essentially uses the same code. Its movement is slightly different,
+         and glides along the walls, and uses code from the sample.Walls robot.
+
+ */
 
 package ist;
 import robocode.*;
@@ -9,16 +26,12 @@ import static robocode.util.Utils.*;
 import java.util.*;
 
 
-/**
- *  Glue - a robot by Carroll
- */
 public class Glue extends AdvancedRobot
 {
 
 double moveAmount;
 double moveAmountX;
 double moveAmountY;  // How much to move
-int radarDir = 1;
 byte movementDirection = 1;
 double radarTurn;
 double enemyHeadingChange;
@@ -249,7 +262,7 @@ public void onPaint(Graphics2D g) {
 }
 
 public void onWin() {
-								setColors(Color.green);
+				setColors(Color.green);
 }
 
 //////////////////////
@@ -355,65 +368,65 @@ public void setColors(Color c) {
 // Enemy Data Class //
 //////////////////////
 class ScannedRobot {
-	String name;
-	int X;
-	int Y;
-	double pX;
-	double pY;
-	double energy;
-	double bearing;
-	double bearingR;
-	double heading;
-	double headingR;
-	double velocity;
-	double distance;
-	long lastUpdate;
-	boolean stationary;
+String name;
+int X;
+int Y;
+double pX;
+double pY;
+double energy;
+double bearing;
+double bearingR;
+double heading;
+double headingR;
+double velocity;
+double distance;
+long lastUpdate;
+boolean stationary;
 
 
-	ScannedRobot(ScannedRobotEvent e) {
-					// Setting the name isn't in updateBot just to make sure
-					// stuff doesnt get corrupted
-					name = e.getName();
-					updateBot(e);
-	}
+ScannedRobot(ScannedRobotEvent e) {
+				// Setting the name isn't in updateBot just to make sure
+				// stuff doesnt get corrupted
+				name = e.getName();
+				updateBot(e);
+}
 
-	void updateBot(ScannedRobotEvent e) {
-					lastUpdate = getTime();
-					distance = e.getDistance();
-					energy = e.getEnergy();
-					bearing = e.getBearing();
-					bearingR = e.getBearingRadians();
-					heading = e.getHeading();
-					headingR = e.getHeadingRadians();
-					velocity = e.getVelocity();
+void updateBot(ScannedRobotEvent e) {
+				lastUpdate = getTime();
+				distance = e.getDistance();
+				energy = e.getEnergy();
+				bearing = e.getBearing();
+				bearingR = e.getBearingRadians();
+				heading = e.getHeading();
+				headingR = e.getHeadingRadians();
+				velocity = e.getVelocity();
 
-					Point2D.Double pos = getPos(e);
+				Point2D.Double pos = getPos(e);
 
-					if ( (Math.abs(pos.x - X) < .00001) &&
-					     (Math.abs(pos.y - Y) < .00001)) {
-									stationary = true;
-					} else {
-									stationary = false;
-					}
+				if ( (Math.abs(pos.x - X) < .00001) &&
+				     (Math.abs(pos.y - Y) < .00001)) {
+								stationary = true;
+				} else {
+								stationary = false;
+				}
 
-					X = (int) pos.x;
-					Y = (int) pos.y;
+				X = (int) pos.x;
+				Y = (int) pos.y;
 
 
-	}
+}
 
-	Point2D.Double getPos(ScannedRobotEvent event) {
-					// More trig
+Point2D.Double getPos(ScannedRobotEvent event) {
+				// More trig
 
-					double distance = event.getDistance();
-					double angle = getHeadingRadians() + event.getBearingRadians();
+				double distance = event.getDistance();
+				double angle = getHeadingRadians() + event.getBearingRadians();
 
-					double x = getX() + Math.sin(angle) * distance;
-					double y = getY() + Math.cos(angle) * distance;
+				double x = getX() + Math.sin(angle) * distance;
+				double y = getY() + Math.cos(angle) * distance;
 
-					return new Point2D.Double(x, y);
-	}
+				return new Point2D.Double(x, y);
+}
 
 
 
